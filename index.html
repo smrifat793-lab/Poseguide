@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PoseGuide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f7;--panel:rgba(250,251,255,.9);--ink:#1b2233;--muted:#5d667c;--accent:#3b5bff;--onaccent:#fff;--line:rgba(27,34,51,.14);--chip:rgba(27,34,51,.07);--guide:#ff3d9a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1118;--panel:rgba(20,24,35,.88);--ink:#eef1fa;--muted:#9aa3ba;--accent:#8794ff;--onaccent:#0e1118;--line:rgba(255,255,255,.16);--chip:rgba(255,255,255,.09);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1118;--panel:rgba(20,24,35,.88);--ink:#eef1fa;--muted:#9aa3ba;--accent:#8794ff;--onaccent:#0e1118;--line:rgba(255,255,255,.16);--chip:rgba(255,255,255,.09);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",ui-rounded,system-ui,-apple-system,"Segoe UI",sans-serif}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer}
+#stage{position:fixed;inset:0;background:#000;touch-action:none;overflow:hidden}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#ov{position:absolute;left:50%;top:42%;height:62%;width:auto;max-width:none;pointer-events:none;user-select:none;-webkit-user-drag:none;transform-origin:center;filter:drop-shadow(0 0 2px rgba(0,0,0,.55))}
+.top{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 10px;pointer-events:none}
+.top>*{pointer-events:auto}
+.brand{font-weight:700;font-size:19px;letter-spacing:-.01em;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.brand i{font-style:normal;color:var(--guide)}
+.pill{border:0;border-radius:999px;padding:7px 11px;background:rgba(0,0,0,.5);color:#fff;font-size:13px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.row{display:flex;gap:8px}
+.panel{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--panel);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);border-radius:22px 22px 0 0;padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 12px)}
+.strip{display:flex;gap:10px;overflow-x:auto;padding:8px 6px 10px;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.add{flex:none;width:56px;height:74px;border-radius:12px;border:1.5px dashed var(--muted);background:transparent;color:var(--ink);font-size:13px;line-height:1.2}
+.th{position:relative;flex:none;width:56px;height:74px;border-radius:12px;border:2.5px solid transparent;cursor:pointer}
+.th.on{border-color:var(--accent)}
+.th img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+.del{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);font-size:14px;line-height:1;padding:0}
+.lower{display:flex;align-items:center;gap:14px}
+.ctrl{flex:1;min-width:0;display:grid;gap:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:0;border-radius:999px;padding:7px 12px;background:var(--chip);font-size:13px}
+.chip.on{background:var(--accent);color:var(--onaccent)}
+.sl{display:grid;grid-template-columns:58px 1fr;align-items:center;font-size:13px;color:var(--muted)}
+.sl input{width:100%;accent-color:var(--accent);margin:0}
+#shutter{flex:none;width:68px;height:68px;border-radius:50%;border:4px solid var(--ink);background:var(--bg);box-shadow:inset 0 0 0 4px var(--bg),inset 0 0 0 40px var(--accent);padding:0}
+#shutter:active{transform:scale(.93)}
+.msg{position:fixed;left:20px;right:20px;top:20%;z-index:4;text-align:center;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.7);pointer-events:none}
+.msg b{font-size:19px}
+.msg p{margin:8px auto 12px;max-width:300px;font-size:15px;line-height:1.45}
+.msg button{pointer-events:auto;background:#fff;color:#1b2233;text-shadow:none}
+#shot{position:fixed;inset:0;z-index:20;background:rgba(5,7,12,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px);color:#fff}
+#shot img{max-width:100%;max-height:68%;border-radius:12px;object-fit:contain}
+#shot p{margin:0;font-size:14px;color:#c4cadb}
+#shot a,#shot button{display:inline-block;border:0;border-radius:999px;padding:11px 20px;font-size:15px;text-decoration:none;background:#fff;color:#1b2233}
+#shot a{background:var(--accent);color:var(--onaccent)}
+.tip{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 58px);z-index:6;max-width:380px;background:var(--panel);color:var(--ink);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:grid;gap:8px;font-size:14px;line-height:1.4;max-height:46vh;overflow-y:auto}
+.tiphead{display:flex;justify-content:space-between;align-items:center}
+.tiphead button{border:0;background:var(--chip);width:28px;height:28px;border-radius:50%;font-size:16px;line-height:1;padding:0}
+.tip ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.tip small{color:var(--muted)}
+.tip .sl{grid-template-columns:44px 1fr 34px;gap:6px}
+.tip .sl span{color:var(--ink);text-align:right}
+.aibox{border-top:1px solid var(--line);padding-top:8px;display:grid;gap:4px}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="stage"><video id="cam" autoplay playsinline muted></video><img id="ov" alt="" hidden></div>
+<div id="msg" class="msg" hidden></div>
+
+<header class="top">
+  <div class="brand">Pose<i>Guide</i></div>
+  <div class="row"><button class="pill" id="tipBtn">Tips</button><button class="pill" id="eye">Hide guide</button><button class="pill" id="flip">Flip</button></div>
+</header>
+
+<aside class="tip" id="tip" hidden>
+  <div class="tiphead"><b>Camera tips</b><button id="tipX" aria-label="Close tips">×</button></div>
+  <ul id="tipList"></ul>
+  <small>Quick guess from the photo.</small>
+  <div id="ai" class="aibox" hidden></div>
+  <label class="sl">Zoom<input type="range" id="zm" min="100" max="400" value="100"><span id="zv">1×</span></label>
+  <div class="chips"><button class="chip on" id="applyZ">Set zoom</button><button class="chip" id="askAI" hidden>Ask Claude for angle tips</button></div>
+</aside>
+
+<section class="panel">
+  <div class="strip" id="strip"></div>
+  <div class="lower">
+    <div class="ctrl">
+      <div class="chips">
+        <button class="chip on" id="mGhost">Ghost</button>
+        <button class="chip" id="mLine">Outline</button>
+        <button class="chip" id="mMirror">Mirror</button>
+        <button class="chip" id="reset">Reset</button>
+      </div>
+      <label class="sl">Opacity<input type="range" id="op" min="10" max="90" value="55"></label>
+      <label class="sl">Size<input type="range" id="sz" min="20" max="300" value="100"></label>
+    </div>
+    <button id="shutter" aria-label="Take photo"></button>
+  </div>
+</section>
+
+<input type="file" id="file" accept="image/*" multiple hidden>
+<input type="file" id="bgfile" accept="image/*" hidden>
+
+<div id="shot" hidden>
+  <img id="shotimg" alt="Your photo">
+  <p>Press and hold the photo to save it, or use the button.</p>
+  <div class="row"><a id="dl" download="pose-photo.jpg" href="#">Save photo</a><button id="closeShot">Back to camera</button></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const cam=$('#cam'),ov=$('#ov'),stage=$('#stage'),msg=$('#msg'),strip=$('#strip'),file=$('#file'),bgfile=$('#bgfile');
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+let poses=[],cur=null,mode='ghost',flip=false,facing='environment',stream=null,hideGuide=false,camOK=null,opacity=.55;
+const T={x:0,y:0,s:1},cache={};
+
+/* ---------- storage (IndexedDB, falls back to memory) ---------- */
+let db=null;
+const openDB=()=>new Promise(res=>{try{const r=indexedDB.open('poseguide',1);r.onupgradeneeded=()=>r.result.createObjectStore('poses',{keyPath:'id'});r.onsuccess=()=>{db=r.result;res()};r.onerror=()=>res()}catch(e){res()}});
+const dbAll=()=>new Promise(res=>{if(!db)return res([]);try{const q=db.transaction('poses').objectStore('poses').getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>res([])}catch(e){res([])}});
+const dbPut=p=>{try{db&&db.transaction('poses','readwrite').objectStore('poses').put(p)}catch(e){}};
+const dbDel=id=>{try{db&&db.transaction('poses','readwrite').objectStore('poses').delete(id)}catch(e){}};
+
+/* ---------- images ---------- */
+const readImg=f=>new Promise((res,rej)=>{
+  const fr=new FileReader();
+  fr.onerror=()=>rej(new Error('read'));
+  fr.onload=()=>{
+    const i=new Image();
+    i.onload=()=>{const k=Math.min(1,1100/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(i.width*k));c.height=Math.max(1,Math.round(i.height*k));c.getContext('2d').drawImage(i,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.85))};
+    i.onerror=()=>rej(new Error('decode'));
+    i.src=fr.result;
+  };
+  fr.readAsDataURL(f);
+});
+
+/* Edge-detect a pose photo into a pink line drawing on a transparent background */
+const outline=p=>new Promise(res=>{
+  if(cache[p.id])return res(cache[p.id]);
+  const i=new Image();
+  i.onload=()=>{
+    const k=Math.min(1,640/Math.max(i.width,i.height)),w=Math.round(i.width*k),h=Math.round(i.height*k);
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const cx=c.getContext('2d');cx.drawImage(i,0,0,w,h);
+    const px=cx.getImageData(0,0,w,h).data,g=new Float32Array(w*h),b=new Float32Array(w*h);
+    for(let j=0;j<w*h;j++)g[j]=.3*px[j*4]+.59*px[j*4+1]+.11*px[j*4+2];
+    for(let y=1;y<h-1;y++)for(let X=1;X<w-1;X++){let s=0;for(let a=-1;a<=1;a++)for(let e=-1;e<=1;e++)s+=g[(y+a)*w+X+e];b[y*w+X]=s/9}
+    const o=cx.createImageData(w,h),q=o.data;
+    for(let y=1;y<h-1;y++)for(let X=1;X<w-1;X++){
+      const n=y*w+X;
+      const gx=-b[n-w-1]-2*b[n-1]-b[n+w-1]+b[n-w+1]+2*b[n+1]+b[n+w+1];
+      const gy=-b[n-w-1]-2*b[n-w]-b[n-w+1]+b[n+w-1]+2*b[n+w]+b[n+w+1];
+      const m=Math.sqrt(gx*gx+gy*gy),k4=n*4;
+      q[k4]=255;q[k4+1]=61;q[k4+2]=154;q[k4+3]=clamp((m-30)*5,0,255);
+    }
+    cx.putImageData(o,0,0);
+    res(cache[p.id]=c.toDataURL('image/png'));
+  };
+  i.src=p.src;
+});
+
+/* ---------- overlay ---------- */
+function paint(){
+  ov.style.opacity=mode==='line'?Math.min(1,opacity+.3):opacity;
+  ov.style.transform=`translate(-50%,-50%) translate(${T.x}px,${T.y}px) scale(${flip?-T.s:T.s},${T.s})`;
+  $('#sz').value=Math.round(T.s*100);
+}
+async function applyImg(){
+  if(!cur){ov.hidden=true;return}
+  const want=cur;
+  const src=mode==='line'?await outline(cur):cur.src;
+  if(want!==cur)return;
+  ov.src=src;ov.hidden=hideGuide;paint();
+}
+function select(p){cur=p;render();applyImg();status();tips(p)}
+function render(){
+  strip.innerHTML='';
+  const add=document.createElement('button');add.className='add';add.textContent='+ Add';add.onclick=()=>file.click();strip.append(add);
+  poses.forEach(p=>{
+    const d=document.createElement('div');d.className='th'+(cur&&cur.id===p.id?' on':'');
+    const im=new Image();im.src=p.src;im.alt='Pose reference';d.append(im);
+    if(cur&&cur.id===p.id){const x=document.createElement('button');x.className='del';x.textContent='×';x.setAttribute('aria-label','Delete this pose');x.onclick=e=>{e.stopPropagation();remove(p.id)};d.append(x)}
+    d.onclick=()=>select(p);strip.append(d);
+  });
+}
+function remove(id){poses=poses.filter(p=>p.id!==id);dbDel(id);delete cache[id];if(cur&&cur.id===id){cur=poses[0]||null;tips(null)}render();applyImg();status()}
+function status(){
+  let h='';
+  if(camOK===false)h='<b>Camera is not available</b><p>Allow camera access in your browser, or open this page directly in your phone’s browser if it’s blocked here.</p><button class="pill" id="bgb">Use a photo as background</button>';
+  else if(!poses.length)h='<b>Add a pose photo</b><p>Tap “+ Add” and pick a reference photo of a model or influencer. It will appear over your camera.</p>';
+  msg.innerHTML=h;msg.hidden=!h;
+  const b=$('#bgb');if(b)b.onclick=()=>bgfile.click();
+}
+
+/* ---------- gestures: drag to move, pinch (or wheel) to resize ---------- */
+const ptrs=new Map();
+stage.addEventListener('pointerdown',e=>{stage.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY})});
+stage.addEventListener('pointermove',e=>{
+  const prev=ptrs.get(e.pointerId);if(!prev)return;
+  if(ptrs.size===1){T.x+=e.clientX-prev.x;T.y+=e.clientY-prev.y}
+  else if(ptrs.size===2){
+    const [a,b]=[...ptrs.values()],d0=Math.hypot(a.x-b.x,a.y-b.y);
+    ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const [a2,b2]=[...ptrs.values()],d1=Math.hypot(a2.x-b2.x,a2.y-b2.y);
+    if(d0>0)T.s=clamp(T.s*d1/d0,.2,3);
+  }
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});paint();
+});
+['pointerup','pointercancel'].forEach(t=>stage.addEventListener(t,e=>ptrs.delete(e.pointerId)));
+stage.addEventListener('wheel',e=>{e.preventDefault();T.s=clamp(T.s*(e.deltaY<0?1.06:.94),.2,3);paint()},{passive:false});
+
+/* ---------- controls ---------- */
+function setMode(m){mode=m;$('#mGhost').classList.toggle('on',m==='ghost');$('#mLine').classList.toggle('on',m==='line');applyImg()}
+$('#mGhost').onclick=()=>setMode('ghost');
+$('#mLine').onclick=()=>setMode('line');
+$('#mMirror').onclick=e=>{flip=!flip;e.currentTarget.classList.toggle('on',flip);paint()};
+$('#reset').onclick=()=>{T.x=0;T.y=0;T.s=1;paint()};
+$('#op').oninput=e=>{opacity=e.target.value/100;paint()};
+$('#sz').oninput=e=>{T.s=e.target.value/100;paint()};
+$('#eye').onclick=e=>{hideGuide=!hideGuide;ov.hidden=hideGuide||!cur;e.currentTarget.textContent=hideGuide?'Show guide':'Hide guide'};
+$('#flip').onclick=()=>{facing=facing==='user'?'environment':'user';startCam()};
+
+function note(t){let n=$('#note');if(!n){n=document.createElement('div');n.id='note';n.style.cssText='position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 60px);z-index:30;background:#1b2233;color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;text-align:center';document.body.append(n)}n.textContent=t;n.hidden=false;clearTimeout(n._t);n._t=setTimeout(()=>{n.hidden=true},5000)}
+file.onchange=async()=>{
+  if(!file.files||!file.files.length)return;
+  let ok=0,bad='';
+  for(const f of Array.from(file.files)){try{const src=await readImg(f),p={id:'p'+Date.now()+Math.random().toString(36).slice(2,6),src,t:Date.now()};poses.push(p);dbPut(p);cur=p;ok++}catch(e){bad=(e&&e.message)||'error'}}
+  file.value='';if(bad)note(ok?'Some photos could not be added.':'Could not read that photo ('+bad+'). Try another picture.');T.x=0;T.y=0;T.s=1;render();applyImg();status();tips(cur);
+};
+bgfile.onchange=async()=>{
+  const f=bgfile.files[0];if(!f)return;
+  try{const u=await readImg(f);cam.style.background=`url(${u}) center/contain no-repeat`;cam.removeAttribute('src');camOK=true;status()}catch(e){}
+  bgfile.value='';
+};
+
+/* ---------- zoom (hardware if the camera allows it, otherwise digital) ---------- */
+let zoom=1,hw=null,track=null;
+const zm=$('#zm'),zv=$('#zv');
+function initZoom(){
+  track=stream.getVideoTracks()[0];hw=null;
+  try{const c=track.getCapabilities&&track.getCapabilities();if(c&&c.zoom&&c.zoom.max>1)hw={min:Math.max(1,c.zoom.min||1),max:c.zoom.max}}catch(e){}
+  zm.max=Math.round(Math.min(4,hw?hw.max:4)*100);
+  setZoom(1);
+}
+function setZoom(z){
+  zoom=clamp(z,1,hw?Math.min(4,hw.max):4);
+  const m=facing==='user'?'scaleX(-1) ':'';
+  if(hw){try{track.applyConstraints({advanced:[{zoom:clamp(zoom,hw.min,hw.max)}]})}catch(e){}cam.style.transform=m||'none'}
+  else cam.style.transform=m+`scale(${zoom})`;
+  zm.value=Math.round(zoom*100);zv.textContent=(Math.round(zoom*10)/10)+'×';
+}
+zm.oninput=e=>setZoom(e.target.value/100);
+
+/* ---------- camera tips ---------- */
+const tip=$('#tip');
+let canAI=false,sampler=null;
+const PROMPT='You are a photography coach. Look at this reference pose photo and tell the photographer how to recreate the shot with a phone camera. Reply with ONLY a JSON object, no markdown, in this shape: {"framing":"full body, 3/4 body, waist-up or headshot","camera_height":"for example chest height, eye level, knee height or above eye level","angle":"shoot slightly upward, straight on or slightly downward, and whether to stand left or right of the subject","distance":"rough metres from the subject and why","orientation":"portrait or landscape","zoom":a number from 1 to 4 for the phone zoom factor,"tips":["three short tips of at most 14 words each"]}';
+const toBlob=u=>{const [h,b]=u.split(','),m=h.match(/:(.*?);/)[1],s=atob(b),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return new Blob([a],{type:m})};
+
+/* Rough on-device guess: orientation, how much of the frame the subject fills, and where it sits */
+const analyze=p=>new Promise(res=>{
+  const i=new Image();
+  i.onload=()=>{
+    const k=Math.min(1,200/Math.max(i.width,i.height)),w=Math.max(8,Math.round(i.width*k)),h=Math.max(8,Math.round(i.height*k));
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const ctx=c.getContext('2d');ctx.drawImage(i,0,0,w,h);
+    const px=ctx.getImageData(0,0,w,h).data,g=new Float32Array(w*h),rs=new Float32Array(h),cs=new Float32Array(w);
+    for(let j=0;j<w*h;j++)g[j]=.3*px[j*4]+.59*px[j*4+1]+.11*px[j*4+2];
+    for(let y=1;y<h-1;y++)for(let X=1;X<w-1;X++){const n=y*w+X,m=Math.abs(g[n+1]-g[n-1])+Math.abs(g[n+w]-g[n-w]);if(m>40){rs[y]+=m;cs[X]+=m}}
+    const span=a=>{let t=0;for(const v of a)t+=v;t=t||1;let s=0,lo=0,hi=a.length-1,got=false;for(let j=0;j<a.length;j++){s+=a[j];if(!got&&s>=t*.04){lo=j;got=true}if(s>=t*.96){hi=j;break}}return[lo/a.length,(hi+1)/a.length]};
+    const [y0,y1]=span(rs),[x0,x1]=span(cs),fill=y1-y0,mx=(x0+x1)/2,my=(y0+y1)/2,ar=i.width/i.height,L=[];
+    L.push(ar>1.15?'Hold your phone sideways (landscape).':ar<.87?'Hold your phone upright (portrait).':'The photo is nearly square, so either way works.');
+    let z,label;
+    if(fill>=.85){z=2;label='a tight shot'}else if(fill>=.6){z=1.5;label='a medium shot'}else{z=1;label='a wide shot'}
+    L.push(`Looks like ${label}: the subject fills about ${Math.round(fill*100)}% of the frame height.`);
+    L.push(z>1?`Zoom to about ${z}× and step back. It flatters faces and avoids a stretched look.`:'Keep zoom at 1× and leave space around the subject.');
+    const hs=mx<.4?'left of centre':mx>.6?'right of centre':'',vs=my<.42?'high in the frame':my>.58?'low in the frame':'';
+    L.push(hs||vs?`The subject sits ${[hs,vs].filter(Boolean).join(' and ')}. Slide the guide to match.`:'The subject is centred.');
+    res({zoom:z,lines:L});
+  };
+  i.onerror=()=>res({zoom:1,lines:['Couldn’t read this photo.']});
+  i.src=p.src;
+});
+const sugZoom=p=>clamp(+(p.ai&&p.ai.zoom)||p.an.zoom,1,4);
+function aiRender(p){
+  const box=$('#ai');box.innerHTML='';
+  if(!p.ai){box.hidden=true;return}
+  box.hidden=false;
+  const h=document.createElement('b');h.textContent='From Claude';box.append(h);
+  const ul=document.createElement('ul');
+  [['Framing',p.ai.framing],['Camera height',p.ai.camera_height],['Angle',p.ai.angle],['Distance',p.ai.distance],['Phone',p.ai.orientation]].forEach(([k,v])=>{if(v){const li=document.createElement('li');li.textContent=k+': '+v;ul.append(li)}});
+  (Array.isArray(p.ai.tips)?p.ai.tips.slice(0,4):[]).forEach(t=>{const li=document.createElement('li');li.textContent=String(t);ul.append(li)});
+  box.append(ul);
+}
+async function tips(p){
+  if(!p){tip.hidden=true;return}
+  tip.hidden=false;$('#tipList').innerHTML='<li>Reading the pose…</li>';
+  if(!p.an){p.an=await analyze(p);dbPut(p)}
+  if(cur!==p)return;
+  $('#tipList').innerHTML=p.an.lines.map(t=>'<li>'+t+'</li>').join('');
+  aiRender(p);
+  $('#applyZ').textContent='Set zoom to '+(Math.round(sugZoom(p)*10)/10)+'×';
+  $('#askAI').hidden=!canAI||!!p.ai;
+}
+$('#applyZ').onclick=()=>{if(cur&&cur.an)setZoom(sugZoom(cur))};
+$('#tipX').onclick=()=>{tip.hidden=true};
+$('#tipBtn').onclick=()=>{if(cur)tips(cur)};
+$('#askAI').onclick=async()=>{
+  const p=cur,btn=$('#askAI'),box=$('#ai');
+  if(!p||!sampler)return;
+  btn.disabled=true;box.hidden=false;box.textContent='Claude is looking at the pose…';
+  try{
+    const {text}=await sampler(PROMPT,{images:[toBlob(p.src)],modelTier:'quick'});
+    const m=text.replace(/```json|```/g,'').match(/\{[\s\S]*\}/);
+    p.ai=JSON.parse(m?m[0]:text);dbPut(p);
+  }catch(e){
+    box.textContent=e&&e.code==='not_granted'?'Allow Claude in the permission prompt to get angle tips.':e&&e.code==='rate_limited'?'Too many requests. Try again in a minute.':'Couldn’t get tips this time. Try again.';
+    btn.disabled=false;return;
+  }
+  btn.disabled=false;if(cur===p)tips(p);
+};
+(async()=>{try{if(window.claude){sampler=await window.claude.use('sample');canAI=!!sampler;if(cur)$('#askAI').hidden=!canAI||!!cur.ai}}catch(e){}})();
+
+/* ---------- camera ---------- */
+async function startCam(){
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    cam.srcObject=stream;cam.style.background='none';camOK=true;
+    initZoom();
+  }catch(e){camOK=false}
+  status();
+}
+$('#shutter').onclick=()=>{
+  if(!cam.videoWidth)return;
+  const c=document.createElement('canvas');c.width=cam.videoWidth;c.height=cam.videoHeight;
+  const x=c.getContext('2d');
+  if(facing==='user'){x.translate(c.width,0);x.scale(-1,1)}
+  {const z=hw?1:zoom,sw=c.width/z,sh=c.height/z;x.drawImage(cam,(c.width-sw)/2,(c.height-sh)/2,sw,sh,0,0,c.width,c.height)}
+  const u=c.toDataURL('image/jpeg',.92);
+  $('#shotimg').src=u;$('#dl').href=u;$('#shot').hidden=false;
+};
+$('#closeShot').onclick=()=>{$('#shot').hidden=true};
+const camLive=()=>{const t=stream&&stream.getVideoTracks()[0];return !!t&&t.readyState==='live'&&!t.muted};
+const wake=()=>{if(!document.hidden&&camOK!==false&&stream&&!camLive())setTimeout(()=>{if(!camLive())startCam()},400)};
+document.addEventListener('visibilitychange',wake);window.addEventListener('focus',wake);
+$('#dl').onclick=e=>{if(window.Android){e.preventDefault();Android.saveImage($('#dl').href)}};
+
+(async()=>{
+  await openDB();
+  poses=(await dbAll()).sort((a,b)=>a.t-b.t);
+  if(poses.length)cur=poses[0];
+  render();applyImg();status();startCam();
+})();
+</script>
+</body>
+</html>
