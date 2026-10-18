@@ -7,7 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -o ./*.zip -d proj
+      - run: |
+          unzip -o ./*.zip -d proj
+          if [ -f index.html ]; then cp index.html proj/app/src/main/assets/index.html; fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
